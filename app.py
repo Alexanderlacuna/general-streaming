@@ -1,5 +1,6 @@
 import json
 import io
+import requests
 from flask import Flask,render_template
 from flask_socketio import SocketIO,emit
 from time import sleep
@@ -11,6 +12,14 @@ socketio = SocketIO(app)
 
 obj = {"name":"Alexander","value":"Y"}
 
+def mock_gemma_mapping():
+	results = requests.get("http://genenetwork.org/api/v_pre1/mapping?trait_id=10015&db=BXDPublish&method=gemma&use_loco=true")
+
+	mapping_obj = json.loads(results.content)
+
+	yield mapping_obj
+
+
 def string_io_converter():
 	length = len(json.dumps(obj))
 	string_stream = io.StringIO(json.dumps(obj))
@@ -20,13 +29,26 @@ def string_io_converter():
 @socketio.on('messenger')
 def test_connect():
 
-	string_stream,length = string_io_converter()
+	# string_stream,length = string_io_converter()
+	gemma_results = mock_gemma_mapping()
 
-	while length>string_stream.tell():
-		data = string_stream.read(1)
-		print(data)
+	string_io_data = io.StringIO(gemma_results)
+	while True:
+		print(string_io_data)
+		data = string_io_data.read(1)
+		if data =="":
+			break
+
+		
 		emit("response",{'data':data})
-		sleep(0.1)
+		# sleep(0.1)
+
+
+	# while length>string_stream.tell():
+	# 	data = string_stream.read(1)
+	# 	print(data)
+	# 	emit("response",{'data':data})
+	# 	sleep(0.1)
 
 
 @socketio.on("gemma")
